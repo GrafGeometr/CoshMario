@@ -887,6 +887,9 @@ def generate_level(level, level_type):
             elif level[y][x][0] == 'u':
                 Tile(level[y][x], x, y, level_type)
             elif level[y][x][0] == 'w':
+                if MERCHANTS[int(level[y][x][1:])]['last trade'] is not None and datetime.datetime.now() - \
+                        MERCHANTS[int(level[y][x][1:])]['last trade'] > datetime.timedelta(minutes=10):
+                    MERCHANTS[int(level[y][x][1:])]['change'] = 'WORK'
                 Tile(level[y][x], x, y, level_type)
 
     # вернем игрока, а также размер поля в клетках
@@ -1168,7 +1171,7 @@ def trade_game(screen, merchant, player):
                      f"Здравтсвуй, путник. Величать меня {merchant['name']} можешь."
                      f" С планеты {merchant['home planet']} я есть.",
                      (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
-    if merchant['change'] not in ['UPGRADE', 'WORK']:
+    if merchant['change'] not in ['UPGRADE', 'WORK', 'NOWORK']:
         k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, "К лучшему меняемся:",
                          (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
         for offer in merchant['change']:
@@ -1221,13 +1224,18 @@ def trade_game(screen, merchant, player):
                     if pygame.Rect((buttons[i][0], buttons[i][1]), (buttons[i][2], buttons[i][3])).collidepoint(
                             event.pos):
                         res = None
-                        if merchant['change'] not in ['UPGRADE', 'WORK']:
+                        if merchant['change'] not in ['UPGRADE', 'WORK', 'NOWORK']:
                             res = player.change(merchant['change'][i])
                         elif merchant['change'] == 'UPGRADE':
                             res = player.change(['PETROLEUM', 'ARTJOMEUM'][i])
                         else:
+                            res = True
                             player.work()
-                        if res and randint(0, 5) == 0 and merchant['change'] not in ['UPGRADE', 'WORK']:
+                            # print(123)
+                            if randint(0, 20) == 0:
+                                buttons.pop()
+                                merchant['change'] = 'NOWORK'
+                        if res and randint(0, 5) == 0 and merchant['change'] not in ['UPGRADE', 'WORK', 'NOWORK']:
                             buttons.pop(-1)
                             merchant['change'].pop(i)
                         break
@@ -1250,50 +1258,40 @@ def trade_game(screen, merchant, player):
 
         pygame.draw.rect(screen, (23, 23, 23), (((WIDTH - window_w) // 2 + move_right, 0), (window_w, window_h)))
 
-        buttons = []
         k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, 10,
                          f"Здравтсвуй, путник. Величать меня {merchant['name']} можешь."
                          f" С планеты {merchant['home planet']} я есть.",
                          (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
-        if merchant['change'] not in ['UPGRADE', 'WORK']:
+        if merchant['change'] not in ['UPGRADE', 'WORK', 'NOWORK']:
             k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, "К лучшему меняемся:",
                              (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
             for offer in merchant['change']:
                 screen.blit(pictures_of_goods[offer[1]], ((WIDTH - window_w) // 2 + 10 + move_right, k))
                 screen.blit(pictures_of_goods[offer[0]], ((WIDTH + window_w) // 2 - 75 - 6 + move_right, k))
-                button = [(WIDTH - window_w) // 2 + 90 + move_right, k]
                 k, w = draw_text((WIDTH - window_w) // 2 + 90 + move_right, k,
                                  f"Мне ты давать {num_repr(offer[3])} {goods_translated[goods.index(offer[1])]}, "
                                  f"тебе давать я {num_repr(offer[2])} {goods_translated[goods.index(offer[0])]}",
                                  (255, 255, 255), screen, 30, width=window_w - 180, fon_color=(128, 128, 128),
                                  min_lines=3)
-                button.append(w)
-                button.append(k - button[1])
-                buttons.append(button)
         elif merchant['change'] == 'UPGRADE':
             k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, "К лучшему меняемся:",
                              (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
             for x in ['PETROLEUM', 'ARTJOMEUM']:
                 screen.blit(pictures_of_goods[x], ((WIDTH - window_w) // 2 + 10 + move_right, k))
                 screen.blit(upgrade_image, ((WIDTH + window_w) // 2 - 75 - 6 + move_right, k))
-                button = [(WIDTH - window_w) // 2 + 90 + move_right, k]
                 k, w = draw_text((WIDTH - window_w) // 2 + 90 + move_right, k,
                                  f"Мне ты давать {ship_level + 1} {goods_translated[goods.index(x)]}, "
                                  f"тебе давать я корабля улучшение.",
                                  (255, 255, 255), screen, 30, width=window_w - 180, fon_color=(128, 128, 128),
                                  min_lines=3)
-                button.append(w)
-                button.append(k - button[1])
-                buttons.append(button)
         else:
             k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k,
                              "Ты работать будешь, я - тебе деньги давать.",
                              (255, 255, 255), screen, 50, line_size=20, fon_color=(128, 128, 128))
-            button = [(WIDTH - window_w) // 2 + 90 + move_right, k]
-            k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, 'Работать!', (255, 255, 255), screen, 30, width=window_w - 180, fon_color=(128, 128, 128))
-            button.append(w)
-            button.append(k - button[1])
-            buttons.append(button)
+            if merchant['change'] == 'WORK':
+                k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, 'Работать!', (255, 255, 255), screen, 30, width=window_w - 180, fon_color=(128, 128, 128))
+            else:
+                k, w = draw_text((WIDTH - window_w) // 2 + 10 + move_right, k, 'Извини, больше работы нет!', (255, 255, 255), screen, 30, width=window_w - 180, fon_color=(128, 128, 128))
 
         blit_text(screen)
         pygame.display.flip()
